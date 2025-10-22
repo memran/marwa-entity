@@ -1,0 +1,12 @@
+
+# Composer dependencies
+/vendor/
+composer.lock
+
+# PHPUnit / Testing
+/.phpunit.result.cache
+/.phpunit.cache/
+coverage/
+.clover.xml
+phpunit.xml
+phpunit.xml.dist

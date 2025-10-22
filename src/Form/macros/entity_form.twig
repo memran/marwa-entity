@@ -1,0 +1,29 @@
+{# Basic macro that renders fields based on the schema uiSpec #}
+{% macro render(fields, values, errors) %}
+  {% for name, f in fields %}
+    <div class="field {{ errors[name] ? 'has-error' : '' }}">
+      <label for="{{ name }}">{{ f.label }}</label>
+
+      {% set widget = f.meta.widget ?? 'text' %}
+      {% if f.type == 'boolean' %}
+        <input type="checkbox" id="{{ name }}" name="{{ name }}" value="1" {{ values[name] ? 'checked' : '' }}>
+      {% elseif f.type == 'enum' %}
+        <select id="{{ name }}" name="{{ name }}">
+          {% for opt in f.enum %}
+            <option value="{{ opt }}" {{ values[name] == opt ? 'selected' : '' }}>{{ opt }}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <input type="{{ widget }}" id="{{ name }}" name="{{ name }}" value="{{ values[name]|e('html_attr') }}">
+      {% endif %}
+
+      {% if errors[name] %}
+        <ul class="errors">
+          {% for msg in errors[name] %}
+            <li>{{ msg }}</li>
+          {% endfor %}
+        </ul>
+      {% endif %}
+    </div>
+  {% endfor %}
+{% endmacro %}
