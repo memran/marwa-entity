@@ -106,15 +106,15 @@ Array
 
 ### Core Concepts
 
-      | Concept | Class | Purpose |
-      | :------- | :------: | -------: |
-      | Entity Schema  | EntitySchema  | Blueprint of all fields  |
-      | Field  | Field  | Single field definition (type, label, rules, sanitizers)  |
-      | Validator  | Validator  | Evaluates schema rules and builds error bags  |
-      | Rules  | Rules\*  | Pluggable validation rules (Required, Min, Unique, etc.)  |
-      | ErrorBag  | Validation\ErrorBag  | Collects validation messages  |
-      | Sanitizers  | Support\Sanitizers  | Built-in input cleaners  |
-      | Entity  | Entity  | Executes validation, sanitization, and casting  |
+| Concept       |        Class        |                                                  Purpose |
+| :------------ | :-----------------: | -------------------------------------------------------: |
+| Entity Schema |    EntitySchema     |                                  Blueprint of all fields |
+| Field         |        Field        | Single field definition (type, label, rules, sanitizers) |
+| Validator     |      Validator      |             Evaluates schema rules and builds error bags |
+| Rules         |       Rules\*       | Pluggable validation rules (Required, Min, Unique, etc.) |
+| ErrorBag      | Validation\ErrorBag |                             Collects validation messages |
+| Sanitizers    | Support\Sanitizers  |                                  Built-in input cleaners |
+| Entity        |       Entity        |           Executes validation, sanitization, and casting |
 
 ### Rule System
 
@@ -127,15 +127,15 @@ $schema->string('password')
 
 ### Built-in rules:
 
-      | Rule | Purpose |
-      | :------- | :------: |
-      | Required   | Value must be present |
-      | StringRule   | Must be a string |
-      | IntegerRule   | Must be an integer |
-      | Min,Max   |  Numeric or string length checks |
-      | Email, Regex   | Format checks |
-      | InArray   | Must match one of the given values |
-      | Unique, Exists    | Custom callable checks (framework-agnostic) |
+| Rule           |                   Purpose                   |
+| :------------- | :-----------------------------------------: |
+| Required       |            Value must be present            |
+| StringRule     |              Must be a string               |
+| IntegerRule    |             Must be an integer              |
+| Min,Max        |       Numeric or string length checks       |
+| Email, Regex   |                Format checks                |
+| InArray        |     Must match one of the given values      |
+| Unique, Exists | Custom callable checks (framework-agnostic) |
 
 ✅ Unique and Exists are callback-based — you pass your own closure to query DB or API.
 
