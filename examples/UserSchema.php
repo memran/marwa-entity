@@ -38,3 +38,4 @@ $input = ['name' => '  MY Name  ', 'email' => ' TEST@EXAMPLE.com ', 'is_active' 
 $data  = $entity->hydrate($input);
 
 var_dump($data);  // $data is sanitized + validated and cast
+print_r($schema->migrationSpec());
