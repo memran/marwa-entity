@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Marwa\Entity\Validation\Rules;
 
 /**
@@ -8,16 +10,17 @@ namespace Marwa\Entity\Validation\Rules;
  */
 final class Nullable extends AbstractRule
 {
-      public function __construct()
-      {
-            $this->message = '';
-      }
-      public function name(): string
-      {
-            return 'nullable';
-      }
-      public function validate(mixed $value, array $context = []): bool
-      {
-            return true;
-      }
+    public function __construct()
+    {
+        $this->message = '';
+    }
+    public function name(): string
+    {
+        return 'nullable';
+    }
+    /** @param array<string, mixed> $context */
+    public function validate(mixed $value, array $context = []): bool
+    {
+        return true;
+    }
 }

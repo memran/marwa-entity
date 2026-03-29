@@ -1,18 +1,19 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Marwa\Entity\Entity;
 
 use Marwa\Entity\Contracts\RuleInterface;
-use Marwa\Entity\Contracts\SanitizerInterface;
 
-/**
- * Supported field types
- */
 final class Field
 {
-    /**  
-     * @var string 
-     * */
+    /**
+     * @param list<string>|null $enum
+     * @param list<RuleInterface> $rules
+     * @param list<callable(mixed): mixed> $sanitizers
+     * @param array<string, mixed> $meta
+     */
     public function __construct(
         public readonly string $name,
         private Types $type = Types::String,
@@ -20,71 +21,76 @@ final class Field
         private ?array $enum = null,
         private array $rules = [],
         private array $sanitizers = [],
-        private array $meta = [] // ui hints (placeholder, help, widget, options)
+        private array $meta = [],
     ) {}
-    /** Factory method */
+
     public static function make(string $name): self
     {
         return new self($name);
     }
-    /** Set field type */
+
     public function type(Types $type): self
     {
         $this->type = $type;
+
         return $this;
     }
-    /** Type helpers */
+
     public function string(): self
     {
         return $this->type(Types::String);
     }
-    /** Type helpers */
+
     public function integer(): self
     {
         return $this->type(Types::Integer);
     }
-    /** Type helpers */
+
     public function boolean(): self
     {
         return $this->type(Types::Boolean);
     }
-    /** Type helpers */
+
     public function decimal(): self
     {
         return $this->type(Types::Decimal);
     }
-    /** Type helpers */
+
     public function datetime(): self
     {
         return $this->type(Types::DateTime);
     }
-    /** Type helpers */
+
     public function json(): self
     {
         return $this->type(Types::Json);
     }
-    /** Type helpers */
+
+    /**
+     * @param list<string> $values
+     */
     public function enum(array $values): self
     {
         $this->type = Types::Enum;
         $this->enum = $values;
+
         return $this;
     }
-    /*
-    * Setters for other properties
-    */
+
     public function label(string $label): self
     {
         $this->label = $label;
+
         return $this;
     }
-    /** Set meta key-value */
+
     public function meta(string $key, mixed $value): self
     {
         $this->meta[$key] = $value;
+
         return $this;
     }
-    /** Set widget meta */
+
     public function widget(string $widget): self
     {
         return $this->meta('widget', $widget);
@@ -94,13 +100,14 @@ final class Field
     public function rule(RuleInterface ...$rules): self
     {
         array_push($this->rules, ...$rules);
+
         return $this;
     }
 
-    /** @param callable|SanitizerInterface ...$sanitizers */
     public function sanitize(callable ...$sanitizers): self
     {
         array_push($this->sanitizers, ...$sanitizers);
+
         return $this;
     }
 
@@ -112,18 +119,30 @@ final class Field
     {
         return $this->label;
     }
+    /**
+     * @return list<string>|null
+     */
     public function getEnum(): ?array
     {
         return $this->enum;
     }
+    /**
+     * @return list<RuleInterface>
+     */
     public function getRules(): array
     {
         return $this->rules;
     }
+    /**
+     * @return list<callable(mixed): mixed>
+     */
     public function getSanitizers(): array
     {
         return $this->sanitizers;
     }
+    /**
+     * @return array<string, mixed>
+     */
     public function getMeta(): array
     {
         return $this->meta;

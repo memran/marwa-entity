@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Marwa\Entity\Validation\Rules;
 
 final class StringRule extends AbstractRule
@@ -8,8 +11,12 @@ final class StringRule extends AbstractRule
         $this->message = $message;
     }
 
-    public function name(): string { return 'string'; }
+    public function name(): string
+    {
+        return 'string';
+    }
 
+    /** @param array<string, mixed> $context */
     public function validate(mixed $value, array $context = []): bool
     {
         return $value === null || is_string($value);

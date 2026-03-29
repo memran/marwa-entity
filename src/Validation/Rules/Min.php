@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Marwa\Entity\Validation\Rules;
 
 final class Min extends AbstractRule
@@ -9,13 +12,23 @@ final class Min extends AbstractRule
         $this->params = ['min' => $this->min];
     }
 
-    public function name(): string { return 'min'; }
+    public function name(): string
+    {
+        return 'min';
+    }
 
+    /** @param array<string, mixed> $context */
     public function validate(mixed $value, array $context = []): bool
     {
-        if ($value === null) return true;
-        if (is_string($value)) return mb_strlen($value) >= $this->min;
-        if (is_numeric($value)) return $value >= $this->min;
+        if ($value === null) {
+            return true;
+        }
+        if (is_string($value)) {
+            return mb_strlen($value) >= $this->min;
+        }
+        if (is_numeric($value)) {
+            return $value >= $this->min;
+        }
         return false;
     }
 }

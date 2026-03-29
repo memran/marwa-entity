@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Marwa\Entity\Support;
 
 /**
@@ -12,27 +14,35 @@ namespace Marwa\Entity\Support;
  */
 final class SanitizerFactory
 {
-      /** @var array<string, callable(array $params): callable> */
-      private static array $custom = [];
+    /** @var array<string, callable> */
+    private static array $custom = [];
 
-      public static function register(string $name, callable $resolver): void
-      {
-            self::$custom[strtolower($name)] = $resolver;
-      }
+    public static function register(string $name, callable $resolver): void
+    {
+        self::$custom[strtolower($name)] = $resolver;
+    }
 
-      public static function make(string $name, array $params = []): callable
-      {
-            $key = strtolower($name);
+    /**
+     * @param array<string, mixed> $params
+     *
+     * @return callable(mixed): mixed
+     */
+    public static function make(string $name, array $params = []): callable
+    {
+        $key = strtolower($name);
 
-            if (isset(self::$custom[$key])) {
-                  return (self::$custom[$key])($params);
-            }
+        if (isset(self::$custom[$key])) {
+            return (self::$custom[$key])($params);
+        }
 
-            return match ($key) {
-                  'trim'       => Sanitizers::trim(),
-                  'lower'      => Sanitizers::lower(),
-                  'strip_tags' => Sanitizers::stripTags((array)($params['allowed'] ?? [])),
-                  default      => throw new \InvalidArgumentException("Unknown sanitizer: {$name}")
-            };
-      }
+        return match ($key) {
+            'trim'       => Sanitizers::trim(),
+            'lower'      => Sanitizers::lower(),
+            'strip_tags' => Sanitizers::stripTags(array_values(array_filter(
+                (array) ($params['allowed'] ?? []),
+                static fn(mixed $tag): bool => is_string($tag),
+            ))),
+            default      => throw new \InvalidArgumentException("Unknown sanitizer: {$name}"),
+        };
+    }
 }

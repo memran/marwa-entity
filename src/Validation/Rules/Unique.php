@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Marwa\Entity\Validation\Rules;
 
 /**
@@ -16,11 +19,17 @@ final class Unique extends AbstractRule
         $this->message = $message;
     }
 
-    public function name(): string { return 'unique'; }
+    public function name(): string
+    {
+        return 'unique';
+    }
 
+    /** @param array<string, mixed> $context */
     public function validate(mixed $value, array $context = []): bool
     {
-        if ($value === null) return true;
+        if ($value === null) {
+            return true;
+        }
         return (bool) call_user_func($this->checker, $value, $context);
     }
 }

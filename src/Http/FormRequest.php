@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Marwa\Entity\Http;
 
 use Marwa\Entity\Entity\Entity;
@@ -29,167 +31,184 @@ use Psr\Http\Message\ServerRequestInterface;
  */
 abstract class FormRequest
 {
-      private ServerRequestInterface $request;
-      private ?ContainerInterface $container;
-      private ?array $cachedValidated = null;
-      private ?ErrorBag $cachedErrors = null;
+    /** @var array<string, mixed>|null */
+    private ?array $cachedInput = null;
 
-      public function __construct(ServerRequestInterface $request, ?ContainerInterface $container = null)
-      {
-            $this->request = $request;
-            $this->container = $container;
-      }
+    /** @var array<string, mixed>|null */
+    private ?array $cachedValidated = null;
+    private ?ErrorBag $cachedErrors = null;
 
-      /** Provide the Entity that defines schema + validation for this request. */
-      abstract protected function entity(): Entity;
+    public function __construct(
+        private readonly ServerRequestInterface $request,
+        private readonly ?ContainerInterface $container = null,
+    ) {}
 
-      /** Authorization hook. Override in child; return false to deny early. */
-      protected function authorize(): bool
-      {
-            return true;
-      }
+    abstract protected function entity(): Entity;
 
-      /** Called when authorize() returns false; override to customize. */
-      protected function failedAuthorization(): never
-      {
-            throw new \RuntimeException('This action is unauthorized.', 403);
-      }
+    protected function authorize(): bool
+    {
+        return true;
+    }
 
-      /**
-       * Collect raw input. Override to customize source/merge order.
-       * By default: query params + parsed body (arrays only).
-       */
-      protected function collectInput(): array
-      {
-            $query = $this->request->getQueryParams();
-            $body  = $this->request->getParsedBody();
+    protected function failedAuthorization(): never
+    {
+        throw new \RuntimeException('This action is unauthorized.', 403);
+    }
 
-            $query = is_array($query) ? $query : [];
-            $body  = is_array($body)  ? $body  : [];
+    /**
+     * Collect raw input. Override to customize source/merge order.
+     *
+     * @return array<string, mixed>
+     */
+    protected function collectInput(): array
+    {
+        return array_merge($this->normalizeInput($this->request->getQueryParams()), $this->parsedBody());
+    }
 
-            return array_merge($query, $body);
-      }
+    /**
+     * @param array<string, mixed> $input
+     *
+     * @return array<string, mixed>
+     */
+    protected function prepareForValidation(array $input): array
+    {
+        return $input;
+    }
 
-      /**
-       * Pre-validation hook to mutate inputs (e.g. map keys, flatten arrays).
-       * Return the transformed array.
-       */
-      protected function prepareForValidation(array $input): array
-      {
-            return $input;
-      }
+    /**
+     * @param array<string, mixed> $validated
+     *
+     * @return array<string, mixed>
+     */
+    protected function passedValidation(array $validated): array
+    {
+        return $validated;
+    }
 
-      /**
-       * Post-validation hook to adjust the validated data (e.g. computed fields).
-       * Only called when validation passes.
-       */
-      protected function passedValidation(array $validated): array
-      {
-            return $validated;
-      }
+    /**
+     * @return array<string, mixed>
+     */
+    public function validated(): array
+    {
+        if ($this->cachedValidated !== null) {
+            return $this->cachedValidated;
+        }
 
-      /**
-       * Validate lazily and cache results. Throws ValidationException on error.
-       */
-      public function validated(): array
-      {
-            if ($this->cachedValidated !== null) {
-                  return $this->cachedValidated;
+        if (! $this->authorize()) {
+            $this->failedAuthorization();
+        }
+
+        $input = $this->prepareForValidation($this->all());
+
+        try {
+            $validated = $this->entity()->hydrate($input, [
+                'container' => $this->container,
+                'request' => $this->request,
+            ]);
+
+            $this->cachedValidated = $this->passedValidation($validated);
+            $this->cachedErrors = null;
+
+            return $this->cachedValidated;
+        } catch (\InvalidArgumentException $e) {
+            $this->cachedErrors = self::decodeErrors($e);
+
+            throw new ValidationException($this->cachedErrors, previous: $e);
+        }
+    }
+
+    public function hasErrors(): bool
+    {
+        return $this->cachedErrors?->hasAny() === true;
+    }
+
+    public function errors(): ?ErrorBag
+    {
+        return $this->cachedErrors;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function all(): array
+    {
+        return $this->cachedInput ??= $this->collectInput();
+    }
+
+    public function input(string $key, mixed $default = null): mixed
+    {
+        return $this->all()[$key] ?? $default;
+    }
+
+    public function query(string $key, mixed $default = null): mixed
+    {
+        return $this->normalizeInput($this->request->getQueryParams())[$key] ?? $default;
+    }
+
+    public function body(string $key, mixed $default = null): mixed
+    {
+        return $this->parsedBody()[$key] ?? $default;
+    }
+
+    public function file(string $key): ?\Psr\Http\Message\UploadedFileInterface
+    {
+        $file = $this->request->getUploadedFiles()[$key] ?? null;
+
+        return $file instanceof \Psr\Http\Message\UploadedFileInterface ? $file : null;
+    }
+
+    public function header(string $name, mixed $default = null): mixed
+    {
+        $values = $this->request->getHeader($name);
+
+        return $values[0] ?? $default;
+    }
+
+    public function request(): ServerRequestInterface
+    {
+        return $this->request;
+    }
+
+    public function container(): ?ContainerInterface
+    {
+        return $this->container;
+    }
+
+    /**
+     * @param mixed $value
+     *
+     * @return array<string, mixed>
+     */
+    private function normalizeInput(mixed $value): array
+    {
+        return is_array($value) ? $value : [];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function parsedBody(): array
+    {
+        return $this->normalizeInput($this->request->getParsedBody());
+    }
+
+    private static function decodeErrors(\InvalidArgumentException $exception): ErrorBag
+    {
+        $decoded = json_decode($exception->getMessage(), true);
+        $bag = new ErrorBag();
+
+        if (! is_array($decoded)) {
+            $bag->add('general', $exception->getMessage());
+
+            return $bag;
+        }
+
+        foreach ($decoded as $field => $messages) {
+            foreach ((array) $messages as $message) {
+                $bag->add((string) $field, (string) $message);
             }
+        }
 
-            if (!$this->authorize()) {
-                  $this->failedAuthorization(); // never returns
-            }
-
-            $input = $this->prepareForValidation($this->collectInput());
-
-            try {
-                  $context = [
-                        'container' => $this->container,
-                        'request'   => $this->request,
-                  ];
-
-                  $validated = $this->entity()->hydrate($input, $context);
-                  $validated = $this->passedValidation($validated);
-
-                  $this->cachedValidated = $validated;
-                  $this->cachedErrors = null;
-
-                  return $validated;
-            } catch (\InvalidArgumentException $e) {
-                  // Entity::hydrate throws with JSON-encoded errors
-                  $decoded = json_decode($e->getMessage(), true) ?: [];
-                  $bag = new ErrorBag();
-                  foreach ($decoded as $field => $messages) {
-                        foreach ((array)$messages as $m) {
-                              $bag->add($field, (string)$m);
-                        }
-                  }
-                  $this->cachedErrors = $bag;
-                  throw new ValidationException($bag);
-            }
-      }
-
-      /** True if validated() has failed and captured errors. */
-      public function hasErrors(): bool
-      {
-            return $this->cachedErrors?->hasAny() === true;
-      }
-
-      /** Access the captured ErrorBag after catching ValidationException. */
-      public function errors(): ?ErrorBag
-      {
-            return $this->cachedErrors;
-      }
-
-      /** Raw input accessor (unvalidated). */
-      public function all(): array
-      {
-            return $this->collectInput();
-      }
-
-      /** Convenience getters */
-      public function input(string $key, mixed $default = null): mixed
-      {
-            $data = $this->collectInput();
-            return $data[$key] ?? $default;
-      }
-
-      public function query(string $key, mixed $default = null): mixed
-      {
-            $q = $this->request->getQueryParams();
-            return is_array($q) ? ($q[$key] ?? $default) : $default;
-      }
-
-      public function body(string $key, mixed $default = null): mixed
-      {
-            $b = $this->request->getParsedBody();
-            return is_array($b) ? ($b[$key] ?? $default) : $default;
-      }
-
-      /** Uploaded files (PSR-7) */
-      public function file(string $key): ?\Psr\Http\Message\UploadedFileInterface
-      {
-            $files = $this->request->getUploadedFiles();
-            return $files[$key] ?? null;
-      }
-
-      /** Headers helper */
-      public function header(string $name, mixed $default = null): mixed
-      {
-            $values = $this->request->getHeader($name);
-            return $values[0] ?? $default;
-      }
-
-      /** The underlying PSR-7 request */
-      public function request(): ServerRequestInterface
-      {
-            return $this->request;
-      }
-
-      /** Optional container accessor */
-      public function container(): ?ContainerInterface
-      {
-            return $this->container;
-      }
+        return $bag;
+    }
 }

@@ -1,62 +1,56 @@
-# 🧩 Marwa\Entity
+# Marwa Entity
 
-**Define once. Protect everywhere.**
+[![Latest Version](https://img.shields.io/packagist/v/memran/marwa-entity.svg)](https://packagist.org/packages/memran/marwa-entity)
+[![Total Downloads](https://img.shields.io/packagist/dt/memran/marwa-entity.svg)](https://packagist.org/packages/memran/marwa-entity)
+[![License](https://img.shields.io/packagist/l/memran/marwa-entity.svg)](https://packagist.org/packages/memran/marwa-entity)
+[![PHP Version](https://img.shields.io/packagist/php-v/memran/marwa-entity.svg)](https://packagist.org/packages/memran/marwa-entity)
+[![CI](https://github.com/memran/marwa-entity/actions/workflows/ci.yml/badge.svg)](https://github.com/memran/marwa-entity/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/codecov/c/github/memran/marwa-entity.svg)](https://codecov.io/gh/memran/marwa-entity)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-brightgreen.svg)](https://phpstan.org/)
 
-A lightweight, framework-agnostic **entity schema and validation library** for PHP 8.2+  
-used across the Marwa ecosystem — powering request validation, form building, and database migrations.
+Framework-agnostic entity schema, validation, sanitization, form metadata, and migration metadata for PHP 8.2+.
 
----
+The package is designed around a single schema definition that can be reused across request validation, typed hydration, UI generation, and migration planning without coupling to a specific framework.
 
-## 🚀 Overview
+## Features
 
-`Marwa\Entity` lets you define your application data structure **once** and reuse it safely across:
+- Define fields, types, rules, sanitizers, and metadata in one place
+- Reuse the same schema for validation, hydration, form rendering, and migration export
+- Integrate with PSR-7 and PSR-15 request pipelines
+- Extend rules and sanitizers through factories and registries
+- Keep framework dependencies out of the core package
 
-- ✅ **Validation** (for HTTP requests, CLI inputs, API payloads, etc.)
-- 🧱 **Entity schema definition** (with metadata, UI hints, and type safety)
-- 🧾 **Migration builders** (generate portable table specs from your schema)
-- 🧰 **Form builders** (for Twig, Blade, or any UI layer)
-- 🔄 **Future support:** load schemas from **YAML / JSON** definition files.
+## Requirements
 
-It’s part of the [Marwa Framework](https://github.com/memran) ecosystem, but fully standalone and PSR-compatible.
+- PHP 8.2 or higher
+- Composer
+- PSR-compatible HTTP message interfaces when using the HTTP layer
 
----
-
-## 🧠 Philosophy
-
-> **Define once, use everywhere.**
-
-Instead of repeating validation logic across models, forms, and migrations,  
-you define your entity schema once and reuse it safely in:
-
-| Layer               | Uses                                                |
-| ------------------- | --------------------------------------------------- |
-| **marwa/request**   | Validates PSR-7 requests with the same schema       |
-| **marwa/view**      | Builds Twig forms from `uiSpec()`                   |
-| **marwa/migration** | Generates database migrations via `migrationSpec()` |
-
----
-
-## 📦 Installation
+## Installation
 
 ```bash
 composer require memran/marwa-entity
 ```
 
-### Requirements:
-
-      * PHP 8.2 or higher
-      * PSR-4 autoloading enabled (Composer handles this)
-
-# Basic Exam
+For development:
 
 ```bash
-use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Entity\Entity;
-use Marwa\Entity\Validation\Validator;
-use Marwa\Entity\Validation\Rules\{Required, Min};
-use Marwa\Entity\Support\Sanitizers;
+composer install
+```
 
-// 1️⃣ Define your entity schema
+## Usage
+
+### Define a schema
+
+```php
+<?php
+
+use Marwa\Entity\Entity\EntitySchema;
+use Marwa\Entity\Support\Sanitizers;
+use Marwa\Entity\Validation\Rules\Email;
+use Marwa\Entity\Validation\Rules\Min;
+use Marwa\Entity\Validation\Rules\Required;
+
 $schema = EntitySchema::make('users');
 
 $schema->string('name')
@@ -66,171 +60,195 @@ $schema->string('name')
 
 $schema->string('email')
     ->label('Email Address')
-    ->rule(new Required())
+    ->rule(new Required(), new Email())
     ->sanitize(Sanitizers::trim(), Sanitizers::lower())
     ->meta('unique', true)
     ->meta('widget', 'email');
 
 $schema->boolean('is_active')
-    ->label('Active?')
+    ->label('Active')
     ->meta('default', true);
+```
 
-// 2️⃣ Validate & sanitize input data
-$validator = new Validator();
-$entity    = new Entity($schema, $validator);
+### Hydrate and validate input
 
-$input = [
+```php
+<?php
+
+use Marwa\Entity\Entity\Entity;
+use Marwa\Entity\Validation\Validator;
+
+$entity = new Entity($schema, new Validator());
+
+$data = $entity->hydrate([
     'name' => '  Emran  ',
-    'email' => '  TEST@EXAMPLE.com ',
-    'is_active' => '1',
-];
+    'email' => '  TEST@EXAMPLE.COM ',
+    'is_active' => 'true',
+]);
 
-try {
-    $validated = $entity->hydrate($input);
-    print_r($validated);
-} catch (\InvalidArgumentException $e) {
-    echo $e->getMessage();
+/*
+[
+    'name' => 'Emran',
+    'email' => 'test@example.com',
+    'is_active' => true,
+]
+*/
+```
+
+### Build a schema from configuration
+
+```php
+<?php
+
+use Marwa\Entity\Entity\SchemaFactory;
+use Marwa\Entity\Support\SanitizerFactory;
+use Marwa\Entity\Validation\RuleFactory;
+
+$schema = SchemaFactory::fromArray(
+    [
+        'name' => 'users',
+        'fields' => [
+            'name' => [
+                'type' => 'string',
+                'rules' => [
+                    ['name' => 'required'],
+                    ['name' => 'min', 'params' => ['min' => 3]],
+                ],
+                'sanitize' => ['trim'],
+            ],
+        ],
+    ],
+    static fn (string $name, array $params = []) => RuleFactory::make($name, $params),
+    static fn (string $name, array $params = []) => SanitizerFactory::make($name, $params),
+);
+```
+
+### Use with PSR-7 requests
+
+```php
+<?php
+
+use Marwa\Entity\Entity\Entity;
+use Marwa\Entity\Http\FormRequest;
+use Psr\Http\Message\ServerRequestInterface;
+
+final class UserStoreRequest extends FormRequest
+{
+    public function __construct(ServerRequestInterface $request, private readonly Entity $entity)
+    {
+        parent::__construct($request);
+    }
+
+    protected function entity(): Entity
+    {
+        return $this->entity;
+    }
 }
 ```
 
-### Output
+### Export migration and form metadata
 
-```bash
-Array
-(
-    [name] => Emran
-    [email] => test@example.com
-    [is_active] => 1
-)
+```php
+$ui = $schema->uiSpec();
+$migration = $schema->migrationSpec();
 ```
 
-### Core Concepts
+## Configuration Guide
 
-| Concept       |        Class        |                                                  Purpose |
-| :------------ | :-----------------: | -------------------------------------------------------: |
-| Entity Schema |    EntitySchema     |                                  Blueprint of all fields |
-| Field         |        Field        | Single field definition (type, label, rules, sanitizers) |
-| Validator     |      Validator      |             Evaluates schema rules and builds error bags |
-| Rules         |       Rules\*       | Pluggable validation rules (Required, Min, Unique, etc.) |
-| ErrorBag      | Validation\ErrorBag |                             Collects validation messages |
-| Sanitizers    | Support\Sanitizers  |                                  Built-in input cleaners |
-| Entity        |       Entity        |           Executes validation, sanitization, and casting |
+Configuration is intentionally code-first. The package does not require environment variables and does not ship framework-specific config files.
 
-### Rule System
+- Use `SchemaFactory::fromArray()`, `fromJson()`, or `fromYaml()` when definitions come from configuration files.
+- Register custom rules through `RuleFactory::register()` or `RuleRegistry`.
+- Register custom sanitizers through `SanitizerFactory::register()`.
+- Pass infrastructure dependencies such as containers or requests through validation context instead of coupling schema code to services.
 
-Add rules fluently:
+Example custom rule registration:
 
-```bash
-$schema->string('password')
-->rule(new Required(), new Min(8));
+```php
+use Marwa\Entity\Validation\RuleFactory;
+use Marwa\Entity\Validation\Rules\AbstractRule;
+
+RuleFactory::register('uppercase', static function (): AbstractRule {
+    return new class () extends AbstractRule {
+        public function __construct()
+        {
+            $this->message = 'The :field must be uppercase.';
+        }
+
+        public function name(): string
+        {
+            return 'uppercase';
+        }
+
+        public function validate(mixed $value, array $context = []): bool
+        {
+            return $value === null || strtoupper((string) $value) === (string) $value;
+        }
+    };
+});
 ```
 
-### Built-in rules:
+## Testing
 
-| Rule           |                   Purpose                   |
-| :------------- | :-----------------------------------------: |
-| Required       |            Value must be present            |
-| StringRule     |              Must be a string               |
-| IntegerRule    |             Must be an integer              |
-| Min,Max        |       Numeric or string length checks       |
-| Email, Regex   |                Format checks                |
-| InArray        |     Must match one of the given values      |
-| Unique, Exists | Custom callable checks (framework-agnostic) |
-
-✅ Unique and Exists are callback-based — you pass your own closure to query DB or API.
-
-### Sanitizers
-
-Sanitizers are lightweight closures applied before validation.
+Run the test suite with:
 
 ```bash
-use Marwa\Entity\Support\Sanitizers;
-
-$schema->string('username')
-->sanitize(Sanitizers::trim(), Sanitizers::lower());
+composer test
 ```
 
-Built-in:
-trim()
-lower()
-stripTags(array $allowed = [])
-
-You can define your own:
+Generate text coverage output with:
 
 ```bash
-$schema->string('slug')->sanitize(fn($v)=>str_replace(' ','-',strtolower($v)))
+composer test:coverage
 ```
 
-### Example: Migration Spec
+The current test suite covers typed hydration, validator behavior, form request integration, and schema factory configuration handling.
+
+## Static Analysis
+
+PHPStan is configured at max level:
 
 ```bash
-print_r($schema->migrationSpec());
+composer analyse
 ```
 
-Output:
+Coding standards can be checked or fixed with:
 
 ```bash
-[
-  'name' => [
-    'type' => 'string',
-    'enum' => null,
-    'nullable' => false,
-    'index' => false,
-    'unique' => false,
-    'default' => null,
-    'precision' => null,
-    'scale' => null
-  ],
-  'email' => [
-    'type' => 'string',
-    'enum' => null,
-    'nullable' => false,
-    'index' => false,
-    'unique' => true,
-    'default' => null,
-    'precision' => null,
-    'scale' => null
-  ]
-]
+composer lint
+composer fix
 ```
 
-## Integration Examples
+## CI/CD
 
-✅ In a PSR-7 Request Library
+GitHub Actions is configured in `.github/workflows/ci.yml`.
 
-```bash
-// marwa/request
-$form = new UserStoreRequest($request, $userEntity);
-$data = $form->validated(); // uses Marwa\Entity internally
-```
+The pipeline runs:
 
-🧱 In a Migration Library
+- `composer validate --strict`
+- coding standards
+- PHPStan analysis
+- PHPUnit with coverage generation
 
-```bash
-$table->applyEntitySpec($schema->migrationSpec());
-```
+The matrix targets PHP 8.2, 8.3, and 8.4.
 
-🎨 In a View Library
+## Security Notes
 
-```bash
-$fields = $schema->uiSpec(); // used by Twig macro to build form
-```
+- Validation happens before type casting to avoid silently mutating invalid input into trusted values.
+- JSON decoding failures and invalid scalar casts are surfaced as validation failures.
+- HTTP middleware enforces safer defaults for content type and oversized payload rejection.
+- The package does not manage sessions, CSRF tokens, or persistence. Those concerns should be handled by the host application or framework.
 
-🔮 Roadmap
+## Contributing
 
-     * JSON / YAML schema loading (auto via SchemaFactory)
-     * Rule registration via container or config
-     * Localization & message translation
-     * Typed casting customization
-     * Nested entity relationships
-     * Advanced schema introspection
+1. Fork the repository.
+2. Install dependencies with `composer install`.
+3. Run `composer ci` before opening a pull request.
+4. Add or update tests for behavior changes.
+5. Update examples or documentation when public APIs change.
 
-⚖️ License
+Keep changes framework-agnostic and prefer PSR interfaces or local contracts over concrete framework services.
 
-Released under the MIT License.
-© 2025 Mohammad Emran
+## License
 
-🌟 Acknowledgments
-
-Built with ❤️ by the Marwa Open Source Team
-for developers who love clarity, reusability, and DX-first design.
+MIT

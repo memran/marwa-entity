@@ -1,4 +1,7 @@
 <?php
+
+declare(strict_types=1);
+
 namespace Marwa\Entity\Validation;
 
 final class ErrorBag
@@ -12,8 +15,26 @@ final class ErrorBag
         $this->errors[$field][] = $message;
     }
 
-    public function has(string $field): bool { return !empty($this->errors[$field] ?? []); }
-    public function hasAny(): bool { return !empty($this->errors); }
-    public function get(string $field): array { return $this->errors[$field] ?? []; }
-    public function all(): array { return $this->errors; }
+    public function has(string $field): bool
+    {
+        return !empty($this->errors[$field] ?? []);
+    }
+    public function hasAny(): bool
+    {
+        return !empty($this->errors);
+    }
+    /**
+     * @return list<string>
+     */
+    public function get(string $field): array
+    {
+        return $this->errors[$field] ?? [];
+    }
+    /**
+     * @return array<string, list<string>>
+     */
+    public function all(): array
+    {
+        return $this->errors;
+    }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Marwa\Entity\Entity;
 
 final class EntitySchema
@@ -9,7 +11,7 @@ final class EntitySchema
     private ?string $name = null;
     /**
      * @param string|null $name Optional name of the entity (e.g., table name)
-     * 
+     *
      */
     public function __construct(?string $name = null)
     {
@@ -50,7 +52,28 @@ final class EntitySchema
         $f = Field::make($name)->boolean();
         return $this->tap($f);
     }
-    /** Field type helpers */
+
+    public function decimal(string $name): Field
+    {
+        $f = Field::make($name)->decimal();
+        return $this->tap($f);
+    }
+
+    public function datetime(string $name): Field
+    {
+        $f = Field::make($name)->datetime();
+        return $this->tap($f);
+    }
+
+    public function json(string $name): Field
+    {
+        $f = Field::make($name)->json();
+        return $this->tap($f);
+    }
+
+    /**
+     * @param list<string> $values
+     */
     public function enum(string $name, array $values): Field
     {
         $f = Field::make($name)->enum($values);
@@ -78,10 +101,15 @@ final class EntitySchema
         return $this->name;
     }
 
-    /** UI helpers for Twig */
+    /**
+     * UI helpers for Twig.
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public function uiSpec(): array
     {
         $spec = [];
+
         foreach ($this->fields as $name => $f) {
             $spec[$name] = [
                 'name'  => $name,
@@ -94,10 +122,15 @@ final class EntitySchema
         return $spec;
     }
 
-    /** Migration metadata (portable, not SQL) */
+    /**
+     * Migration metadata (portable, not SQL).
+     *
+     * @return array<string, array<string, mixed>>
+     */
     public function migrationSpec(): array
     {
         $spec = [];
+
         foreach ($this->fields as $name => $f) {
             $spec[$name] = [
                 'type' => $f->getType()->value,
@@ -116,8 +149,11 @@ final class EntitySchema
     private function hasRequired(Field $f): bool
     {
         foreach ($f->getRules() as $r) {
-            if ($r->name() === 'required') return true;
+            if ($r->name() === 'required') {
+                return true;
+            }
         }
+
         return false;
     }
 }

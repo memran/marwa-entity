@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Marwa\Entity\Validation\Rules;
 
 /**
@@ -8,23 +10,26 @@ namespace Marwa\Entity\Validation\Rules;
  */
 final class Exists extends AbstractRule
 {
-      /** @var callable */
-      private $checker;
+    /** @var callable */
+    private $checker;
 
-      public function __construct(callable $checker, string $message = 'The :field value does not exist.')
-      {
-            $this->checker = $checker;
-            $this->message = $message;
-      }
+    public function __construct(callable $checker, string $message = 'The :field value does not exist.')
+    {
+        $this->checker = $checker;
+        $this->message = $message;
+    }
 
-      public function name(): string
-      {
-            return 'exists';
-      }
+    public function name(): string
+    {
+        return 'exists';
+    }
 
-      public function validate(mixed $value, array $context = []): bool
-      {
-            if ($value === null) return true;
-            return (bool) call_user_func($this->checker, $value, $context);
-      }
+    /** @param array<string, mixed> $context */
+    public function validate(mixed $value, array $context = []): bool
+    {
+        if ($value === null) {
+            return true;
+        }
+        return (bool) call_user_func($this->checker, $value, $context);
+    }
 }

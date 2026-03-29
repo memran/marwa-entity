@@ -1,7 +1,6 @@
 
 # Composer dependencies
 /vendor/
-composer.lock
 
 # PHPUnit / Testing
 /.phpunit.result.cache
@@ -9,4 +8,6 @@ composer.lock
 coverage/
 .clover.xml
 phpunit.xml
-phpunit.xml.dist
+
+# Tool caches
+/.php-cs-fixer.cache

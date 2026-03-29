@@ -1,10 +1,12 @@
 <?php
 
+declare(strict_types=1);
+
 use Marwa\Entity\Entity\Entity;
 use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Validation\Validator;
-use Marwa\Entity\Validation\Rules\{Required, StringRule, Min, Unique};
 use Marwa\Entity\Support\Sanitizers;
+use Marwa\Entity\Validation\Rules\{Min, Required, StringRule, Unique};
+use Marwa\Entity\Validation\Validator;
 
 require __DIR__ . '/../vendor/autoload.php';
 

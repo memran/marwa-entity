@@ -3,9 +3,21 @@
   "description": "Fluent Entity Builder and validation library. define once, protect everywhere.",
   "type": "library",
   "license": "MIT",
+  "keywords": [
+    "entity",
+    "validation",
+    "schema",
+    "psr-15",
+    "form"
+  ],
   "autoload": {
     "psr-4": {
       "Marwa\\Entity\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Marwa\\Entity\\Tests\\": "tests/"
     }
   },
   "require": {
@@ -17,7 +29,25 @@
     "psr/container": "^2.0"
   },
   "require-dev": {
+    "friendsofphp/php-cs-fixer": "^3.66",
+    "phpstan/phpstan": "^1.12",
     "phpunit/phpunit": "^11.0"
+  },
+  "scripts": {
+    "test": "phpunit --configuration phpunit.xml.dist",
+    "test:coverage": "phpunit --configuration phpunit.xml.dist --coverage-text",
+    "analyse": "phpstan analyse --configuration phpstan.neon.dist --no-progress --debug",
+    "lint": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --dry-run --diff --sequential",
+    "fix": "php-cs-fixer fix --config=.php-cs-fixer.dist.php --sequential",
+    "ci": [
+      "@lint",
+      "@analyse",
+      "@test"
+    ]
+  },
+  "config": {
+    "sort-packages": true,
+    "optimize-autoloader": true
   },
   "minimum-stability": "stable",
   "prefer-stable": true
