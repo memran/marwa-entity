@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Entity;
 
+use Marwa\Support\Helper;
 use Marwa\Entity\Validation\Validator;
 
 final class Entity
@@ -32,12 +33,7 @@ final class Entity
 
         foreach ($this->schema->fields() as $name => $field) {
             $value = $input[$name] ?? null;
-
-            foreach ($field->getSanitizers() as $san) {
-                $value = $san($value);
-            }
-
-            $data[$name] = $value;
+            $data[$name] = Helper::pipe($value, $field->getSanitizers());
         }
 
         $errors = $this->validator->validate($this->schema, $data, array_merge($ctx, ['input' => $input]));

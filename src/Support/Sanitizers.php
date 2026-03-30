@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Support;
 
+use Marwa\Support\Str;
+
 /**
  * Class Sanitizers
  * @package Marwa\Entity\Support
@@ -24,7 +26,7 @@ final class Sanitizers
      * */
     public static function lower(): \Closure
     {
-        return static fn($v) => is_string($v) ? mb_strtolower($v) : $v;
+        return static fn($v) => is_string($v) ? Str::lower($v) : $v;
     }
     /**
      * * Strip HTML and PHP tags from a string
@@ -33,7 +35,8 @@ final class Sanitizers
      * */
     public static function stripTags(array $allowed = []): \Closure
     {
-        $allow = $allowed;
-        return static fn($v) => is_string($v) ? strip_tags($v, implode('', array_map(fn($t) => "<$t>", $allow))) : $v;
+        $allow = implode('', array_map(static fn(string $tag): string => "<{$tag}>", $allowed));
+
+        return static fn($v) => is_string($v) ? Str::stripTags($v, $allow) : $v;
     }
 }

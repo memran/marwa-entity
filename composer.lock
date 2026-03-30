@@ -4,8 +4,63 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f9bd6b74bd07a85b8a3fce1afdf5826d",
+    "content-hash": "7bee07bf7542104e1256e1422b0549d8",
     "packages": [
+        {
+            "name": "memran/marwa-support",
+            "version": "v1.2.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/memran/marwa-support.git",
+                "reference": "ba05899ed41e11824a31085c66624fdeacf96655"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/memran/marwa-support/zipball/ba05899ed41e11824a31085c66624fdeacf96655",
+                "reference": "ba05899ed41e11824a31085c66624fdeacf96655",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "ext-mbstring": "*",
+                "ext-openssl": "*",
+                "php": "^8.2"
+            },
+            "require-dev": {
+                "friendsofphp/php-cs-fixer": "^3.66",
+                "phpstan/phpstan": "^1.12",
+                "phpunit/phpunit": "^9.6.33"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Marwa\\Support\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Mohammad Emran",
+                    "email": "memran.dhk@gmail.com"
+                }
+            ],
+            "description": "Framework-agnostic PHP support library with typed helpers for strings, arrays, files, objects, validation, and security primitives",
+            "keywords": [
+                "helpers",
+                "php",
+                "security",
+                "utilities",
+                "validation"
+            ],
+            "support": {
+                "issues": "https://github.com/memran/marwa-support/issues",
+                "source": "https://github.com/memran/marwa-support/tree/v1.2.1"
+            },
+            "time": "2026-03-29T11:30:06+00:00"
+        },
         {
             "name": "psr/container",
             "version": "2.0.2",
