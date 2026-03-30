@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Entity;
 
-use Marwa\Support\Helper;
 use Marwa\Entity\Validation\Validator;
+use Marwa\Support\Helper;
 
 final class Entity
 {
