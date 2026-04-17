@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Entity;
 
-use Marwa\Entity\Contracts\RuleInterface;
+use Marwa\Support\Validation\Contracts\RuleInterface;
 
 final class Field
 {

@@ -4,13 +4,20 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Validation;
 
-use Marwa\Entity\Contracts\TranslatorInterface;
 use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Validation\Rules\Nullable;
+use Marwa\Support\Validation\Contracts\RuleInterface;
+use Marwa\Support\Validation\ErrorBag;
+use Marwa\Support\Validation\RequestValidator;
+use Marwa\Support\Validation\ValidationException;
 
 final class Validator
 {
-    public function __construct(private readonly ?TranslatorInterface $translator = null) {}
+    private RequestValidator $supportValidator;
+
+    public function __construct()
+    {
+        $this->supportValidator = new RequestValidator();
+    }
 
     /**
      * Validate input data against the entity schema.
@@ -20,94 +27,73 @@ final class Validator
      */
     public function validate(EntitySchema $schema, array $data, array $context = []): ErrorBag
     {
-        $errors = new ErrorBag();
+        $rules = $this->convertSchemaRules($schema);
+
+        try {
+            $this->supportValidator->validateInput($data, $rules);
+            return new ErrorBag();
+        } catch (ValidationException $e) {
+            return $this->convertSupportErrors($e);
+        }
+    }
+
+    /**
+     * @return array<string, string|array<int, mixed>>
+     */
+    private function convertSchemaRules(EntitySchema $schema): array
+    {
+        $rules = [];
 
         foreach ($schema->fields() as $name => $field) {
-            $value = $data[$name] ?? null;
-            $rules = $field->getRules();
-            $ruleContext = $this->buildRuleContext($context, $data, $name);
+            $fieldRules = $field->getRules();
 
-            if ($this->shouldSkipNullableRules($rules, $value)) {
+            if ($fieldRules === []) {
                 continue;
             }
 
-            foreach ($rules as $rule) {
-                if ($rule instanceof Nullable) {
-                    continue;
-                }
+            $ruleStrings = [];
 
-                if (! $rule->validate($value, $ruleContext)) {
-                    $errors->add($name, $this->renderMessage($rule->message(), $name, $rule->params()));
-                    break;
+            /** @var RuleInterface $rule */
+            foreach ($fieldRules as $rule) {
+                $ruleName = $rule->name();
+
+                $params = $rule->params();
+                if ($params !== []) {
+                    $paramStrings = [];
+                    foreach ($params as $v) {
+                        if (is_scalar($v)) {
+                            $paramStrings[] = (string) $v;
+                        }
+                    }
+                    if (!empty($paramStrings)) {
+                        $ruleStrings[] = $ruleName . ':' . implode(',', $paramStrings);
+                    } else {
+                        $ruleStrings[] = $ruleName;
+                    }
+                } else {
+                    $ruleStrings[] = $ruleName;
                 }
+            }
+
+            $rules[$name] = $ruleStrings;
+        }
+
+        return $rules;
+    }
+
+    private function convertSupportErrors(ValidationException $e): ErrorBag
+    {
+        $bag = new ErrorBag();
+        $errors = $e->getErrors();
+
+        /** @var array<string, array<string, string>> $errors */
+        foreach ($errors as $field => $messages) {
+            /** @var string $message */
+            foreach ($messages as $message) {
+                $bag->add($field, $message);
             }
         }
 
-        return $errors;
-    }
-
-    /**
-     * @param array<string, mixed> $context
-     * @param array<string, mixed> $data
-     *
-     * @return array<string, mixed>
-     */
-    private function buildRuleContext(array $context, array $data, string $field): array
-    {
-        $context['data'] ??= $data;
-        $context['input'] ??= $data;
-        $context['field'] = $field;
-
-        return $context;
-    }
-
-    /**
-     * @param array<int, object> $rules
-     */
-    private function shouldSkipNullableRules(array $rules, mixed $value): bool
-    {
-        if ($value !== null && $value !== '') {
-            return false;
-        }
-
-        foreach ($rules as $rule) {
-            if ($rule instanceof Nullable) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @param array<string, mixed> $params
-     */
-    private function renderMessage(string $template, string $field, array $params): string
-    {
-        $base = $this->translator?->translate($template, array_merge(['field' => $field], $params))
-            ?? $template;
-
-        $repl = array_merge(['field' => $field], $params);
-        foreach ($repl as $k => $v) {
-            $base = str_replace(':' . $k, $this->stringifyValue($v), $base);
-        }
-        return $base;
-    }
-
-    private function stringifyValue(mixed $value): string
-    {
-        if (is_string($value)) {
-            return $value;
-        }
-
-        if (is_int($value) || is_float($value) || is_bool($value) || $value instanceof \Stringable) {
-            return (string) $value;
-        }
-
-        if (is_array($value)) {
-            return implode(', ', array_map($this->stringifyValue(...), $value));
-        }
-
-        return '';
+        return $bag;
     }
 }

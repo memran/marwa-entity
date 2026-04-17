@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Entity;
 
+use Marwa\Support\Json;
+use Marwa\Support\Str;
+
 final class SchemaFactory
 {
     /**
@@ -25,12 +28,14 @@ final class SchemaFactory
 
             $field = Field::make(self::stringifyKey($name))->type(self::resolveType($cfg['type'] ?? 'string'));
 
-            if (isset($cfg['label']) && $cfg['label'] !== '') {
-                $field->label((string) $cfg['label']);
+            if (isset($cfg['label']) && is_string($cfg['label']) && $cfg['label'] !== '') {
+                $field->label($cfg['label']);
             }
 
             if (isset($cfg['enum']) && is_array($cfg['enum'])) {
-                $field->enum($cfg['enum']);
+                /** @var list<string> $enumValues */
+                $enumValues = array_values(array_filter($cfg['enum'], is_string(...)));
+                $field->enum($enumValues);
             }
 
             foreach ((array) ($cfg['meta'] ?? []) as $key => $value) {
@@ -44,7 +49,13 @@ final class SchemaFactory
                     throw new \InvalidArgumentException(sprintf('Invalid rule definition for field %s.', self::stringifyKey($name)));
                 }
 
-                $rules[] = $ruleResolver(self::stringify($rule['name'], 'Rule name'), (array) ($rule['params'] ?? []));
+                /** @var array<string, mixed> $ruleParams */
+                $ruleParams = $rule['params'] ?? [];
+                $resolved = $ruleResolver(self::stringify($rule['name'], 'Rule name'), $ruleParams);
+                if (! $resolved instanceof \Marwa\Support\Validation\Contracts\RuleInterface) {
+                    throw new \InvalidArgumentException(sprintf('Rule resolver must return RuleInterface for field %s.', self::stringifyKey($name)));
+                }
+                $rules[] = $resolved;
             }
 
             if ($rules !== []) {
@@ -55,14 +66,24 @@ final class SchemaFactory
 
             foreach ((array) ($cfg['sanitize'] ?? []) as $sanitizer) {
                 if (is_array($sanitizer)) {
-                    $sanitizers[] = $sanitizerResolver(
+                    /** @var array<string, mixed> $sanitizerParams */
+                    $sanitizerParams = $sanitizer['params'] ?? [];
+                    $resolved = $sanitizerResolver(
                         self::stringify($sanitizer['name'] ?? '', 'Sanitizer name'),
-                        (array) ($sanitizer['params'] ?? []),
+                        $sanitizerParams,
                     );
+                    if (! is_callable($resolved)) {
+                        throw new \InvalidArgumentException(sprintf('Sanitizer resolver must return callable for field %s.', self::stringifyKey($name)));
+                    }
+                    $sanitizers[] = $resolved;
                     continue;
                 }
 
-                $sanitizers[] = $sanitizerResolver(self::stringify($sanitizer, 'Sanitizer name'));
+                $resolved = $sanitizerResolver(self::stringify($sanitizer, 'Sanitizer name'));
+                if (! is_callable($resolved)) {
+                    throw new \InvalidArgumentException(sprintf('Sanitizer resolver must return callable for field %s.', self::stringifyKey($name)));
+                }
+                $sanitizers[] = $resolved;
             }
 
             if ($sanitizers !== []) {
@@ -90,7 +111,7 @@ final class SchemaFactory
     public static function fromJson(string $json, callable $ruleResolver, callable $sanitizerResolver): EntitySchema
     {
         /** @var array<string, mixed> $array */
-        $array = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+        $array = Json::decode($json);
 
         return self::fromArray($array, $ruleResolver, $sanitizerResolver);
     }
@@ -99,7 +120,7 @@ final class SchemaFactory
     {
         $resolved = self::stringify($type, 'Field type');
 
-        return match (strtolower($resolved)) {
+        return match (Str::lower($resolved)) {
             'string' => Types::String,
             'integer' => Types::Integer,
             'boolean' => Types::Boolean,

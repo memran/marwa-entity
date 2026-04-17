@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 use Marwa\Entity\Entity\Entity;
 use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Support\Sanitizers;
-use Marwa\Entity\Validation\Rules\{Min, Required, StringRule, Unique};
+use Marwa\Entity\Support\SanitizerFactory;
 use Marwa\Entity\Validation\Validator;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -14,20 +13,12 @@ require __DIR__ . '/../vendor/autoload.php';
 $schema = EntitySchema::make('users');
 $schema->string('name')
     ->label('Full Name')
-    ->rule(new Required(), new StringRule(), new Min(3))
-    ->sanitize(Sanitizers::trim());
+    ->sanitize(SanitizerFactory::make('trim'));
 
 $schema->string('email')
     ->label('Email')
     ->meta('unique', true)
-    ->rule(new Required(), new StringRule(), new Unique(function (string $v, array $ctx): bool {
-        // user-provided callable that checks DB via container/ORM
-        // return true if unique; false if duplicate
-        //$db = $ctx['container']->get('db'); // example
-        //return !$db->users()->where('email', $v)->exists();
-        return true; // for demo purposes
-    }))
-    ->sanitize(Sanitizers::trim(), Sanitizers::lower());
+    ->sanitize(SanitizerFactory::make('trim'), SanitizerFactory::make('lower'));
 
 $schema->boolean('is_active')
     ->label('Active?')

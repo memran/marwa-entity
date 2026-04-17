@@ -4,31 +4,32 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "7bee07bf7542104e1256e1422b0549d8",
+    "content-hash": "ccc6138421087a8e3155a17229ee7a0a",
     "packages": [
         {
             "name": "memran/marwa-support",
-            "version": "v1.2.1",
+            "version": "v1.3.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/memran/marwa-support.git",
-                "reference": "ba05899ed41e11824a31085c66624fdeacf96655"
+                "reference": "8992562f589a435f0fe26217dc61ddad9c49b121"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/memran/marwa-support/zipball/ba05899ed41e11824a31085c66624fdeacf96655",
-                "reference": "ba05899ed41e11824a31085c66624fdeacf96655",
+                "url": "https://api.github.com/repos/memran/marwa-support/zipball/8992562f589a435f0fe26217dc61ddad9c49b121",
+                "reference": "8992562f589a435f0fe26217dc61ddad9c49b121",
                 "shasum": ""
             },
             "require": {
                 "ext-json": "*",
                 "ext-mbstring": "*",
                 "ext-openssl": "*",
-                "php": "^8.2"
+                "php": "^8.2",
+                "psr/http-message": "^2.0"
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.66",
-                "phpstan/phpstan": "^1.12",
+                "phpstan/phpstan": "^2.0",
                 "phpunit/phpunit": "^9.6.33"
             },
             "type": "library",
@@ -57,9 +58,9 @@
             ],
             "support": {
                 "issues": "https://github.com/memran/marwa-support/issues",
-                "source": "https://github.com/memran/marwa-support/tree/v1.2.1"
+                "source": "https://github.com/memran/marwa-support/tree/v1.3.1"
             },
-            "time": "2026-03-29T11:30:06+00:00"
+            "time": "2026-04-17T13:42:09+00:00"
         },
         {
             "name": "psr/container",
@@ -1073,15 +1074,15 @@
         },
         {
             "name": "phpstan/phpstan",
-            "version": "1.12.33",
+            "version": "2.1.50",
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/37982d6fc7cbb746dda7773530cda557cdf119e1",
-                "reference": "37982d6fc7cbb746dda7773530cda557cdf119e1",
+                "url": "https://api.github.com/repos/phpstan/phpstan/zipball/d452086fb4cf648c6b2d8cf3b639351f79e4f3e2",
+                "reference": "d452086fb4cf648c6b2d8cf3b639351f79e4f3e2",
                 "shasum": ""
             },
             "require": {
-                "php": "^7.2|^8.0"
+                "php": "^7.4|^8.0"
             },
             "conflict": {
                 "phpstan/phpstan-shim": "*"
@@ -1122,7 +1123,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-02-28T20:30:03+00:00"
+            "time": "2026-04-17T13:10:32+00:00"
         },
         {
             "name": "phpunit/php-code-coverage",

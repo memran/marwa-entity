@@ -34,17 +34,21 @@ final class SanitizerFactory
         $key = Str::lower($name);
 
         if (isset(self::$custom[$key])) {
-            return (self::$custom[$key])($params);
+            $result = (self::$custom[$key])($params);
+            /** @var callable(mixed): mixed */
+            return $result;
         }
 
+        $allowed = array_values(array_filter(
+            (array) ($params['allowed'] ?? []),
+            static fn(mixed $tag): bool => is_string($tag),
+        ));
+
         return match ($key) {
-            'trim'       => Sanitizers::trim(),
-            'lower'      => Sanitizers::lower(),
-            'strip_tags' => Sanitizers::stripTags(array_values(array_filter(
-                (array) ($params['allowed'] ?? []),
-                static fn(mixed $tag): bool => is_string($tag),
-            ))),
-            default      => throw new \InvalidArgumentException("Unknown sanitizer: {$name}"),
+            'trim'       => static fn($v) => is_string($v) ? trim($v) : $v,
+            'lower'      => static fn($v) => is_string($v) ? Str::lower($v) : $v,
+            'strip_tags' => static fn($v) => is_string($v) ? Str::stripTags($v, implode('', array_map(static fn(string $tag): string => "<{$tag}>", $allowed))) : $v,
+            default    => throw new \InvalidArgumentException("Unknown sanitizer: {$name}"),
         };
     }
 }

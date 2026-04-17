@@ -6,19 +6,16 @@ namespace Marwa\Entity\Tests\Entity;
 
 use Marwa\Entity\Entity\Entity;
 use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Support\Sanitizers;
-use Marwa\Entity\Validation\Rules\Required;
+use Marwa\Entity\Support\SanitizerFactory;
 use Marwa\Entity\Validation\Validator;
 use PHPUnit\Framework\TestCase;
 
 final class EntityHydrationTest extends TestCase
 {
-    public function testHydrateSanitizesValidatesAndCastsTypedFields(): void
+    public function testHydrateSanitizesAndCastsTypedFields(): void
     {
         $schema = EntitySchema::make('users');
-        $schema->string('name')
-            ->rule(new Required())
-            ->sanitize(Sanitizers::trim());
+        $schema->string('name')->sanitize(SanitizerFactory::make('trim'));
         $schema->integer('age');
         $schema->boolean('is_active');
         $schema->json('preferences');

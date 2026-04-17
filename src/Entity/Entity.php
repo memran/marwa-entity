@@ -6,6 +6,7 @@ namespace Marwa\Entity\Entity;
 
 use Marwa\Entity\Validation\Validator;
 use Marwa\Support\Helper;
+use Marwa\Support\Json;
 
 final class Entity
 {
@@ -38,10 +39,7 @@ final class Entity
 
         $errors = $this->validator->validate($this->schema, $data, array_merge($ctx, ['input' => $input]));
         if ($errors->hasAny()) {
-            throw new \InvalidArgumentException(json_encode(
-                $errors->all(),
-                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-            ));
+            throw new \InvalidArgumentException(Json::encode($errors->all()));
         }
 
         $castErrors = [];
@@ -55,10 +53,7 @@ final class Entity
         }
 
         if ($castErrors !== []) {
-            throw new \InvalidArgumentException(json_encode(
-                $castErrors,
-                JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE,
-            ));
+            throw new \InvalidArgumentException(Json::encode($castErrors));
         }
 
         return $data;
@@ -148,16 +143,12 @@ final class Entity
             throw new \InvalidArgumentException(sprintf('The %s must be a valid JSON object or array.', $field->name));
         }
 
-        try {
-            /** @var array<mixed>|null $decoded */
-            $decoded = json_decode($value, true, 512, JSON_THROW_ON_ERROR);
-        } catch (\JsonException) {
+        if (! Json::isValid($value)) {
             throw new \InvalidArgumentException(sprintf('The %s must be valid JSON.', $field->name));
         }
 
-        if (! is_array($decoded)) {
-            throw new \InvalidArgumentException(sprintf('The %s must decode to an object or array.', $field->name));
-        }
+        /** @var array<mixed> $decoded */
+        $decoded = Json::decode($value);
 
         return $decoded;
     }

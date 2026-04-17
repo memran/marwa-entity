@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Marwa\Entity\Entity;
 
+use Marwa\Support\Str;
+
 final class EntitySchema
 {
     /** @var array<string, Field> */
@@ -113,7 +115,7 @@ final class EntitySchema
         foreach ($this->fields as $name => $f) {
             $spec[$name] = [
                 'name'  => $name,
-                'label' => $f->getLabel() ?? ucfirst($name),
+                'label' => $f->getLabel() ?? Str::title($name),
                 'type'  => $f->getType()->value,
                 'enum'  => $f->getEnum(),
                 'meta'  => $f->getMeta(),
