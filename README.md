@@ -8,36 +8,29 @@
 [![Coverage](https://img.shields.io/codecov/c/github/memran/marwa-entity.svg)](https://codecov.io/gh/memran/marwa-entity)
 [![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-brightgreen.svg)](https://phpstan.org/)
 
-Framework-agnostic entity schema, validation, sanitization, form metadata, and migration metadata for PHP 8.2+.
+Framework-agnostic entity schema, validation, sanitization, and migration metadata for PHP 8.2+.
 
-The package is designed around a single schema definition that can be reused across request validation, typed hydration, UI generation, and migration planning without coupling to a specific framework.
+The package provides a single schema definition that can be reused across typed hydration, form rendering, and migration planning without coupling to a specific framework.
 
-Sanitizer and helper plumbing is shared with `memran/marwa-support`, which keeps the package smaller and avoids repeating low-level string and pipeline utilities.
+Validation and sanitization are powered by `memran/marwa-support`, keeping the package lightweight and avoiding duplicated utilities.
 
 ## Features
 
 - Define fields, types, rules, sanitizers, and metadata in one place
-- Reuse the same schema for validation, hydration, form rendering, and migration export
-- Integrate with PSR-7 and PSR-15 request pipelines
-- Extend rules and sanitizers through factories and registries
-- Keep framework dependencies out of the core package
+- Reuse the same schema for hydration and migration export
+- Type casting and validation in a single pass
+- Built-in field types: string, integer, boolean, decimal, datetime, json, enum
+- Built-in sanitizers: trim, lower, strip_tags (via marwa-support)
 
 ## Requirements
 
 - PHP 8.2 or higher
 - Composer
-- PSR-compatible HTTP message interfaces when using the HTTP layer
 
 ## Installation
 
 ```bash
 composer require memran/marwa-entity
-```
-
-For development:
-
-```bash
-composer install
 ```
 
 ## Quick Start
@@ -47,23 +40,18 @@ composer install
 
 use Marwa\Entity\Entity\Entity;
 use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Support\Sanitizers;
-use Marwa\Entity\Validation\Rules\Email;
-use Marwa\Entity\Validation\Rules\Min;
-use Marwa\Entity\Validation\Rules\Required;
+use Marwa\Entity\Support\SanitizerFactory;
 use Marwa\Entity\Validation\Validator;
 
 $schema = EntitySchema::make('users');
 
 $schema->string('name')
     ->label('Full Name')
-    ->rule(new Required(), new Min(3))
-    ->sanitize(Sanitizers::trim());
+    ->sanitize(SanitizerFactory::make('trim'));
 
 $schema->string('email')
     ->label('Email Address')
-    ->rule(new Required(), new Email())
-    ->sanitize(Sanitizers::trim(), Sanitizers::lower());
+    ->sanitize(SanitizerFactory::make('trim'), SanitizerFactory::make('lower'));
 
 $schema->boolean('is_active');
 
@@ -94,22 +82,17 @@ Hydrated result:
 <?php
 
 use Marwa\Entity\Entity\EntitySchema;
-use Marwa\Entity\Support\Sanitizers;
-use Marwa\Entity\Validation\Rules\Email;
-use Marwa\Entity\Validation\Rules\Min;
-use Marwa\Entity\Validation\Rules\Required;
+use Marwa\Entity\Support\SanitizerFactory;
 
 $schema = EntitySchema::make('users');
 
 $schema->string('name')
     ->label('Full Name')
-    ->rule(new Required(), new Min(3))
-    ->sanitize(Sanitizers::trim());
+    ->sanitize(SanitizerFactory::make('trim'));
 
 $schema->string('email')
     ->label('Email Address')
-    ->rule(new Required(), new Email())
-    ->sanitize(Sanitizers::trim(), Sanitizers::lower())
+    ->sanitize(SanitizerFactory::make('trim'), SanitizerFactory::make('lower'))
     ->meta('unique', true)
     ->meta('widget', 'email');
 
@@ -166,25 +149,23 @@ $schema->enum('status', ['draft', 'published']);
 
 ### Sanitizers
 
-The public sanitizer API remains in this package:
+Use `SanitizerFactory` to create sanitizers:
 
 ```php
-use Marwa\Entity\Support\Sanitizers;
+use Marwa\Entity\Support\SanitizerFactory;
 
 $schema->string('title')->sanitize(
-    Sanitizers::trim(),
-    Sanitizers::lower(),
-    Sanitizers::stripTags(['strong', 'em']),
+    SanitizerFactory::make('trim'),
+    SanitizerFactory::make('lower'),
+    SanitizerFactory::make('strip_tags', ['allowed' => ['strong', 'em']]),
 );
 ```
 
 Built-in sanitizers:
 
-- `Sanitizers::trim()`
-- `Sanitizers::lower()`
-- `Sanitizers::stripTags(array $allowed = [])`
-
-Internally these helpers now reuse `memran/marwa-support`, which makes sanitizer behavior easier to maintain across packages.
+- `trim` - trim whitespace
+- `lower` - convert to lowercase
+- `strip_tags` - strip HTML tags (supports allowed tags)
 
 ### Build a schema from configuration
 
@@ -193,7 +174,6 @@ Internally these helpers now reuse `memran/marwa-support`, which makes sanitizer
 
 use Marwa\Entity\Entity\SchemaFactory;
 use Marwa\Entity\Support\SanitizerFactory;
-use Marwa\Entity\Validation\RuleFactory;
 
 $schema = SchemaFactory::fromArray(
     [
@@ -201,15 +181,11 @@ $schema = SchemaFactory::fromArray(
         'fields' => [
             'name' => [
                 'type' => 'string',
-                'rules' => [
-                    ['name' => 'required'],
-                    ['name' => 'min', 'params' => ['min' => 3]],
-                ],
                 'sanitize' => ['trim'],
             ],
         ],
     ],
-    static fn (string $name, array $params = []) => RuleFactory::make($name, $params),
+    static fn (string $name, array $params = []) => throw new \RuntimeException('Rules not implemented in demo'),
     static fn (string $name, array $params = []) => SanitizerFactory::make($name, $params),
 );
 ```
@@ -223,29 +199,6 @@ Supported sanitizer definitions:
 ]
 ```
 
-### Use with PSR-7 requests
-
-```php
-<?php
-
-use Marwa\Entity\Entity\Entity;
-use Marwa\Entity\Http\FormRequest;
-use Psr\Http\Message\ServerRequestInterface;
-
-final class UserStoreRequest extends FormRequest
-{
-    public function __construct(ServerRequestInterface $request, private readonly Entity $entity)
-    {
-        parent::__construct($request);
-    }
-
-    protected function entity(): Entity
-    {
-        return $this->entity;
-    }
-}
-```
-
 ### Export migration and form metadata
 
 ```php
@@ -253,81 +206,12 @@ $ui = $schema->uiSpec();
 $migration = $schema->migrationSpec();
 ```
 
-## Browser Testing Example
-
-A browser-friendly example is included at [examples/browser-test.php](/Users/memran/projects/php-projects/marwa-entity/examples/browser-test.php).
-
-Start a local server from the project root:
-
-```bash
-php -S 127.0.0.1:8000 -t examples
-```
-
-Open this URL in your browser:
-
-```text
-http://127.0.0.1:8000/browser-test.php?name=%20Alice%20&email=%20TEST@EXAMPLE.COM%20&is_active=1
-```
-
-Expected JSON response:
-
-```json
-{
-    "ok": true,
-    "input": {
-        "name": " Alice ",
-        "email": " TEST@EXAMPLE.COM ",
-        "is_active": "1"
-    },
-    "data": {
-        "name": "Alice",
-        "email": "test@example.com",
-        "is_active": true
-    }
-}
-```
-
-If the input is invalid, the example returns HTTP `422` with the validation or cast error payload.
-
-## Examples
-
-- [examples/UserSchema.php](/Users/memran/projects/php-projects/marwa-entity/examples/UserSchema.php) for a CLI-style schema and hydration example
-- [examples/browser-test.php](/Users/memran/projects/php-projects/marwa-entity/examples/browser-test.php) for manual browser testing
-
 ## Configuration Guide
 
-Configuration is intentionally code-first. The package does not require environment variables and does not ship framework-specific config files.
+Configuration is intentionally code-first. The package does not require environment variables.
 
-- Use `SchemaFactory::fromArray()`, `fromJson()`, or `fromYaml()` when definitions come from configuration files.
-- Register custom rules through `RuleFactory::register()` or `RuleRegistry`.
+- Use `SchemaFactory::fromArray()` when definitions come from configuration files.
 - Register custom sanitizers through `SanitizerFactory::register()`.
-- Pass infrastructure dependencies such as containers or requests through validation context instead of coupling schema code to services.
-
-Example custom rule registration:
-
-```php
-use Marwa\Entity\Validation\RuleFactory;
-use Marwa\Entity\Validation\Rules\AbstractRule;
-
-RuleFactory::register('uppercase', static function (): AbstractRule {
-    return new class () extends AbstractRule {
-        public function __construct()
-        {
-            $this->message = 'The :field must be uppercase.';
-        }
-
-        public function name(): string
-        {
-            return 'uppercase';
-        }
-
-        public function validate(mixed $value, array $context = []): bool
-        {
-            return $value === null || strtoupper((string) $value) === (string) $value;
-        }
-    };
-});
-```
 
 ## Testing
 
@@ -348,8 +232,6 @@ Run the full local CI command set with:
 ```bash
 composer ci
 ```
-
-The current test suite covers typed hydration, validator behavior, form request integration, and schema factory configuration handling.
 
 ## Static Analysis
 
@@ -385,8 +267,6 @@ The lock file is resolved against PHP `8.2.0` in Composer config so CI does not 
 
 - Validation happens before type casting to avoid silently mutating invalid input into trusted values.
 - JSON decoding failures and invalid scalar casts are surfaced as validation failures.
-- HTTP middleware enforces safer defaults for content type and oversized payload rejection.
-- The package does not manage sessions, CSRF tokens, or persistence. Those concerns should be handled by the host application or framework.
 
 ## Contributing
 
@@ -396,7 +276,7 @@ The lock file is resolved against PHP `8.2.0` in Composer config so CI does not 
 4. Add or update tests for behavior changes.
 5. Update examples or documentation when public APIs change.
 
-Keep changes framework-agnostic and prefer PSR interfaces or local contracts over concrete framework services.
+Keep changes framework-agnostic and prefer PSR interfaces over concrete framework services.
 
 ## License
 
