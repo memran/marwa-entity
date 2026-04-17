@@ -136,8 +136,8 @@ composer ci            # lint -> analyse -> test
 
 ## Versioning
 
-- Version: `v1.0.0`
+- Version: `v1.0.0` (Released: March 30, 2026)
 
 ## Change Log
 
-- Date - CHANGE
+- 2026-03-30 - Initial v1.0.0 release
