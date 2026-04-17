@@ -79,7 +79,7 @@ final class SchemaFactory
                     continue;
                 }
 
-                $resolved = $sanitizerResolver(self::stringify($sanitizer, 'Sanitizer name'));
+                $resolved = $sanitizerResolver(self::stringify($sanitizer, 'Sanitizer name'), []);
                 if (! is_callable($resolved)) {
                     throw new \InvalidArgumentException(sprintf('Sanitizer resolver must return callable for field %s.', self::stringifyKey($name)));
                 }

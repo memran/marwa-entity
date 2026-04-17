@@ -30,6 +30,12 @@ final class EntitySchema
         $this->name = $name;
         return $this;
     }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
     /** Register a field */
     public function field(Field $field): self
     {
